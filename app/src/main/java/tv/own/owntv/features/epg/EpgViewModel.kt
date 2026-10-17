@@ -121,6 +121,8 @@ class EpgViewModel(
     /** "Recently watched" in the category list reads the same history Live TV does. */
     private val historyDao: tv.own.owntv.core.database.dao.HistoryDao,
     private val reminderManager: tv.own.owntv.core.reminder.ReminderManager,
+    /** Fork: FHD/HD/SD of one channel are one guide row, the same one Live TV shows. */
+    private val variantStore: tv.own.owntv.features.live.ChannelVariantStore,
 ) : ViewModel() {
 
     /** The categories' search text, held here so it survives the player (see LiveViewModel). */
@@ -953,6 +955,7 @@ class EpgViewModel(
         }
         // Heavy work — filter hidden, apply renames + manual EPG matches, sort, category-filter — runs off
         // the main thread (#3/#5) so a 50k-channel playlist never freezes the UI building the guide list.
+        val variants = variantStore.current(playlistIds)
         val channels = withContext(Dispatchers.Default) {
             val auto = rawChannels
                 .filter { CustomizeKeys.channel(it) !in cust.hiddenItems }
@@ -960,7 +963,11 @@ class EpgViewModel(
                     memberIds != null || it.categoryId == null || it.categoryId !in hiddenCatIds
                 }
                 .map { ch -> cust.itemNames[CustomizeKeys.channel(ch)]?.let { ch.copy(name = it) } ?: ch }
-            val matched = applyEpgMatches(auto, cust, playlistIds, q)
+            // Fork: one row per channel, named without the quality tag unless the user renamed it.
+            val matched = variants.fold(applyEpgMatches(auto, cust, playlistIds, q)) { it.id }.map { ch ->
+                if (ch.remoteId == null || CustomizeKeys.channel(ch) in cust.itemNames) ch
+                else variants.displayName(ch.id)?.let { ch.copy(name = it) } ?: ch
+            }
             // The Order menu (P4-04): Provider (also the old stored LIVE_TV value), A–Z,
             // Catch-up first, Favourites first. The last two only float those channels to the top.
             val byAlpha = compareBy<ChannelEntity> { it.name.lowercase() }
@@ -979,7 +986,10 @@ class EpgViewModel(
                     is tv.own.owntv.core.live.LiveKey.Folder -> sorted.filter { ch ->
                         ch.categoryId == filter.id && (folderKey == null || cust.movedFromOrigin[CustomizeKeys.channel(ch)] != folderKey)
                     }
-                    else -> sorted.filter { it.id in memberIds.orEmpty() }
+                    // A favourite variant (Rai 1 HD) keeps the folded row (Rai 1) in.
+                    else -> sorted.filter { ch ->
+                        ch.id in memberIds.orEmpty() || variants.siblingsOf(ch.id).any { it in memberIds.orEmpty() }
+                    }
                 }
             }
         }

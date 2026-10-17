@@ -16,6 +16,7 @@ import tv.own.owntv.core.home.HomeFeedReader
 import tv.own.owntv.core.live.GuideReader
 import tv.own.owntv.core.live.LiveEpgReader
 import tv.own.owntv.features.home.HomeViewModel
+import tv.own.owntv.features.live.ChannelVariantStore
 import tv.own.owntv.features.live.LiveViewModel
 import tv.own.owntv.features.movies.MovieViewModel
 import tv.own.owntv.features.profiles.ProfileGateSessionViewModel
@@ -53,6 +54,8 @@ val appModule = module {
     // instance, so the grid, the Live rows and the preview pane share its cache instead of each
     // asking the provider the same question.
     singleOf(::LiveEpgReader)
+    // Fork: FHD/HD/SD folding, one index for Live TV and the Guide.
+    singleOf(::ChannelVariantStore)
     singleOf(::GuideReader)
     singleOf(::SearchReader)
     singleOf(::HomeFeedReader)
@@ -71,6 +74,7 @@ val appModule = module {
     // this note. Every argument is resolved by type, so the order here does not matter.
     viewModel {
         LiveViewModel(
+            get(),
             get(),
             get(),
             get(),
@@ -153,7 +157,34 @@ val appModule = module {
     viewModelOf(::SubtitleSearchViewModel)
     viewModelOf(::DownloadsViewModel)
     viewModelOf(::RecordingsViewModel)
-    viewModelOf(::EpgViewModel)
+    // Explicit for the same arity reason as LiveViewModel (23 parameters since the fork's variant store).
+    viewModel {
+        EpgViewModel(
+            get(),
+            get(),
+            get(),
+            get(),
+            get(),
+            get(),
+            get(),
+            get(),
+            get(),
+            get(),
+            get(),
+            get(),
+            get(),
+            get(),
+            get(),
+            get(),
+            get(),
+            get(),
+            get(),
+            get(),
+            get(),
+            get(),
+            get(),
+        )
+    }
     viewModelOf(::CustomizeViewModel)
     viewModelOf(::CustomizeItemsViewModel)
     viewModelOf(::BackupViewModel)
