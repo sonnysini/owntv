@@ -29,6 +29,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.first
@@ -375,18 +376,28 @@ class LiveViewModel(
     private val variantPicks = appContext.getSharedPreferences("fork_channel_variants", Context.MODE_PRIVATE)
     private val variantPicksVersion = MutableStateFlow(0)
 
-    /** Rebuilt after every sync (the channels table re-emits) and after every pick. */
-    private val variantIndex: StateFlow<ChannelVariantIndex> = ctx
+    /** Rebuilt after every sync (the channels table re-emits) and after every pick. Null until the
+     *  first build, so the Live list waits for it instead of showing every variant and then folding. */
+    private val variantIndexFor: StateFlow<Pair<List<Long>, ChannelVariantIndex>?> = ctx
         .map { it.sourceIds }
         .distinctUntilChanged()
-        .flatMapLatest { ids -> if (ids.isEmpty()) flowOf(emptyList()) else channelDao.observeVariantRows(ids) }
-        .debounce(500)
-        .combine(variantPicksVersion) { rows, _ ->
+        .flatMapLatest { ids ->
+            if (ids.isEmpty()) return@flatMapLatest flowOf(ids to emptyList<tv.own.owntv.core.database.dao.ChannelVariantRow>())
+            // A sync rewrites the table in many batches: settle before rebuilding — except the first time.
+            var first = true
+            channelDao.observeVariantRows(ids)
+                .debounce { if (first) { first = false; 0L } else 500L }
+                .map { ids to it }
+        }
+        .combine(variantPicksVersion) { (ids, rows), _ ->
             withContext(Dispatchers.Default) {
                 val picks = variantPicks.all.mapNotNull { (k, v) -> (v as? Long)?.let { k to it } }.toMap()
-                ChannelVariantIndex.build(rows, picks)
+                ids to ChannelVariantIndex.build(rows, picks)
             }
         }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+    private val variantIndex: StateFlow<ChannelVariantIndex> = variantIndexFor
+        .map { it?.second ?: ChannelVariantIndex.EMPTY }
         .stateIn(viewModelScope, SharingStarted.Eagerly, ChannelVariantIndex.EMPTY)
 
     /** The playing channel's variants (best first) for the player's Quality button; empty = only one. */
@@ -666,7 +677,10 @@ class LiveViewModel(
         // PagingSource doesn't observe content_order, so the switch must recreate it.
         .combine(orderedContexts) { args, _ -> args }
         // Fork: a new variant index (sync, quality pick) recreates the pager, like a customization does.
-        .combine(variantIndex) { args, idx -> args to idx }
+        // Waits for the index of the playlists on screen, so the list never shows unfolded first.
+        .combine(variantIndexFor.filterNotNull()) { args, built -> args to built }
+        .filter { (args, built) -> built.first == args.ctx.sourceIds }
+        .map { (args, built) -> args to built.second }
         .flatMapLatest { (args, variants) ->
             val (key, c, query, sort, cs) = args
             // Customizations are applied to each fresh PagingData inside the pager chain — a PagingData
