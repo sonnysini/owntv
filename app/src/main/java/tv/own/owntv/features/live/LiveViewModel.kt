@@ -29,6 +29,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.first
@@ -38,6 +39,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.withIndex
 import kotlinx.coroutines.launch
@@ -369,6 +371,77 @@ class LiveViewModel(
     private val _previewChannel = MutableStateFlow<ChannelEntity?>(null)
     val previewChannel: StateFlow<ChannelEntity?> = _previewChannel.asStateFlow()
 
+    // --- Fork: quality variants (FHD/HD/SD…) folded into one row ------------------------------------
+
+    /** Which variant the user picked per channel, keyed by [ChannelVariant.groupKey]. */
+    private val variantPicks = appContext.getSharedPreferences("fork_channel_variants", Context.MODE_PRIVATE)
+    private val variantPicksVersion = MutableStateFlow(0)
+
+    /** Rebuilt after every sync (the channels table re-emits) and after every pick. Null until the
+     *  first build, so the Live list waits for it instead of showing every variant and then folding. */
+    private val variantIndexFor: StateFlow<Pair<List<Long>, ChannelVariantIndex>?> = ctx
+        .map { it.sourceIds }
+        .distinctUntilChanged()
+        .flatMapLatest { ids ->
+            if (ids.isEmpty()) return@flatMapLatest flowOf(ids to ChannelVariantIndex.EMPTY)
+            // A sync rewrites the table in many batches: settle before rebuilding — except the first time.
+            var first = true
+            val built = channelDao.observeVariantRows(ids)
+                .debounce { if (first) { first = false; 0L } else 500L }
+                .combine(variantPicksVersion) { rows, _ ->
+                    withContext(Dispatchers.Default) {
+                        val picks = variantPicks.all.mapNotNull { (k, v) -> (v as? Long)?.let { k to it } }.toMap()
+                        ChannelVariantIndex.build(rows, picks).also { saveVariantSnapshot(ids, it) }
+                    }
+                }
+                .map { ids to it }
+            // Last run's index first, so the list folds at once; the rebuild replaces it seconds later.
+            val cached = withContext(Dispatchers.IO) { loadVariantSnapshot(ids) }
+            if (cached == null) built else built.onStart { emit(ids to cached) }
+        }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    private val variantSnapshotFile get() = java.io.File(appContext.filesDir, "fork_variant_index2.txt")
+
+    private fun saveVariantSnapshot(ids: List<Long>, index: ChannelVariantIndex) {
+        runCatching { variantSnapshotFile.writeText(ids.joinToString(",") + "\n" + index.serialize()) }
+    }
+
+    private fun loadVariantSnapshot(ids: List<Long>): ChannelVariantIndex? = runCatching {
+        val text = variantSnapshotFile.takeIf { it.isFile }?.readText() ?: return null
+        val header = text.substringBefore('\n')
+        if (header != ids.joinToString(",")) return null
+        ChannelVariantIndex.parse(text.substringAfter('\n'))
+    }.getOrNull()
+    private val variantIndex: StateFlow<ChannelVariantIndex> = variantIndexFor
+        .map { it?.second ?: ChannelVariantIndex.EMPTY }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, ChannelVariantIndex.EMPTY)
+
+    /** The playing channel's variants (best first) for the player's Quality button; empty = only one. */
+    val previewVariants: StateFlow<List<ChannelVariant>> = combine(_previewChannel, variantIndex) { ch, idx ->
+        ch?.let { idx.variantsOf(it.id) }.orEmpty()
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    /** Play [variant] and make it the row this channel shows from now on. */
+    fun pickVariant(variant: ChannelVariant) {
+        variantPicks.edit().putLong(variant.groupKey, variant.id).apply()
+        variantPicksVersion.value++
+        viewModelScope.launch {
+            val channel = withContext(Dispatchers.IO) { channelDao.getById(variant.id) } ?: return@launch
+            ensurePlaying(custom.value.itemNames[CustomizeKeys.channel(channel)]?.let { channel.copy(name = it) } ?: channel)
+        }
+    }
+
+    private fun List<ChannelEntity>.withoutFoldedVariants(keep: Long? = null): List<ChannelEntity> {
+        val idx = variantIndex.value
+        return filter { it.id == keep || idx.isVisible(it.id) }.map { idx.named(it) }
+    }
+
+    /** A folded row reads as the channel (`Rai 1`), not as the variant it plays (`Rai 1 FHD`). Only for
+     *  rows with a provider id: name-keyed rows would lose their customizations under a new name. */
+    private fun ChannelVariantIndex.named(ch: ChannelEntity): ChannelEntity =
+        if (ch.remoteId == null) ch else displayName(ch.id)?.let { ch.copy(name = it) } ?: ch
+
     /** Every guide read this screen makes, and the now/next cache that used to live here — see
      *  [LiveEpgReader]. The shift it applies is passed in at each call, so this view model stays the
      *  single place that knows a customization changed. */
@@ -625,7 +698,13 @@ class LiveViewModel(
         // Rebuild the pager when a folder gains/loses manual order (C3): the fast-path plain
         // PagingSource doesn't observe content_order, so the switch must recreate it.
         .combine(orderedContexts) { args, _ -> args }
-        .flatMapLatest { (key, c, query, sort, cs) ->
+        // Fork: a new variant index (sync, quality pick) recreates the pager, like a customization does.
+        // Waits for the index of the playlists on screen, so the list never shows unfolded first.
+        .combine(variantIndexFor.filterNotNull()) { args, built -> args to built }
+        .filter { (args, built) -> built.first == args.ctx.sourceIds }
+        .map { (args, built) -> args to built.second }
+        .flatMapLatest { (args, variants) ->
+            val (key, c, query, sort, cs) = args
             // Customizations are applied to each fresh PagingData inside the pager chain — a PagingData
             // that the UI already collected must never be re-transformed (Paging forbids re-collection,
             // which is why hiding a channel used to crash). A customization change re-creates the pager.
@@ -635,16 +714,19 @@ class LiveViewModel(
                 val cust = cs.cust
                 val hiddenCats = cs.hiddenCats
                 val movedFrom = cust.movedFromOrigin
-                if (cust.hiddenItems.isEmpty() && cust.itemNames.isEmpty() && hiddenCats.isEmpty() && movedFrom.isEmpty()) paging
-                else paging
+                val folded = variants.hidden
+                if (cust.hiddenItems.isEmpty() && cust.itemNames.isEmpty() && hiddenCats.isEmpty() && movedFrom.isEmpty()) {
+                    if (folded.isEmpty()) paging else paging.filter { ch -> ch.id !in folded }.map { variants.named(it) }
+                } else paging
                     .filter { ch ->
+                        ch.id !in folded &&
                         isChannelVisible(ch, cust, hiddenCats, key) &&
                             // Moved-out items leave ONLY their origin folder (they stay in All/search).
                             (movedFrom[CustomizeKeys.channel(ch)]?.let { origin ->
                                 key !is LiveKey.Folder || origin != folderContextKeys.value[key.id]
                             } ?: true)
                     }
-                    .map { ch -> cust.itemNames[CustomizeKeys.channel(ch)]?.let { ch.copy(name = it) } ?: ch }
+                    .map { ch -> cust.itemNames[CustomizeKeys.channel(ch)]?.let { ch.copy(name = it) } ?: variants.named(ch) }
             }
         }
         .cachedIn(viewModelScope)
@@ -1045,6 +1127,7 @@ class LiveViewModel(
         loadForCategory = ::channelsInCategory,
         loadWindowAround = ::buildZapList,
         categoryName = { id -> categoryDao.getById(id)?.name },
+        aliasesOf = { id -> variantIndex.value.siblingsOf(id) },
     )
     val canZap: StateFlow<Boolean> = zapList.canZap
     val zapChannels: StateFlow<List<ChannelEntity>> = zapList.channels
@@ -1102,6 +1185,7 @@ class LiveViewModel(
         val cust = custom.value
         val hiddenCats = hiddenCategoryIds.value
         return raw
+            .withoutFoldedVariants()
             .filter { CustomizeKeys.channel(it) !in cust.hiddenItems && (it.categoryId == null || it.categoryId !in hiddenCats) }
             .map { ch -> cust.itemNames[CustomizeKeys.channel(ch)]?.let { ch.copy(name = it) } ?: ch }
     }
@@ -1114,6 +1198,7 @@ class LiveViewModel(
         return withContext(Dispatchers.IO) {
             customCategoryDao.snapshotChannels(c.profileId, key.id, c.sourceIds.ifEmpty { listOf(-1L) }, ZAP_LIST_LIMIT)
         }
+            .withoutFoldedVariants()
             .filter { isChannelVisible(it, cs.cust, cs.hiddenCats, key) }
             .map { ch -> cs.cust.itemNames[CustomizeKeys.channel(ch)]?.let { ch.copy(name = it) } ?: ch }
     }
@@ -1122,7 +1207,7 @@ class LiveViewModel(
     private suspend fun channelsInCategory(categoryId: Long): List<ChannelEntity> {
         val pid = currentProfileId() ?: return emptyList()
         val ctxKey = folderContextKeys.value[categoryId] ?: ""
-        return channelDao.snapshotByCategoryManual(categoryId, pid, ctxKey, ZAP_LIST_LIMIT)
+        return channelDao.snapshotByCategoryManual(categoryId, pid, ctxKey, ZAP_LIST_LIMIT).withoutFoldedVariants()
     }
 
     /** [channel]'s own provider category, with the same hide/rename treatment the browsing lists get,
@@ -1141,6 +1226,7 @@ class LiveViewModel(
         val cust = custom.value
         val hiddenCats = hiddenCategoryIds.value
         return raw
+            .withoutFoldedVariants()
             .filter { CustomizeKeys.channel(it) !in cust.hiddenItems && (it.categoryId == null || it.categoryId !in hiddenCats) }
             .map { ch -> cust.itemNames[CustomizeKeys.channel(ch)]?.let { ch.copy(name = it) } ?: ch }
     }
@@ -1462,6 +1548,7 @@ class LiveViewModel(
         // beforeRaw is in reverse order; combine: before(reversed) + tuned + after
         val raw = beforeRaw.asReversed() + channel + afterRaw
         raw
+            .withoutFoldedVariants(keep = channel.id)
             .filter { isChannelVisible(it, cust, hiddenCats) }
             .map { ch -> cust.itemNames[CustomizeKeys.channel(ch)]?.let { ch.copy(name = it) } ?: ch }
     }

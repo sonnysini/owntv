@@ -195,6 +195,12 @@ fun PlayerHud(
     // streams ExoPlayer can't handle). null = not a live channel; true = currently pinned to mpv.
     compatMode: Boolean? = null,
     onToggleCompatMode: (() -> Unit)? = null,
+    // Fork: the playing live channel's provider variants (FHD/HD/SD…), best first. With two or more,
+    // the Quality button lists them instead of the stream's own heights; [channelVariantIndex] is the
+    // one playing and [onPickChannelVariant] tunes another.
+    channelVariants: List<String> = emptyList(),
+    channelVariantIndex: Int = -1,
+    onPickChannelVariant: ((Int) -> Unit)? = null,
     // VOD engine toggle: switch THIS movie/episode between mpv and ExoPlayer (e.g. to reach tracks only
     // one engine exposes, or to try the other engine on a problem file). null = not a VOD;
     // true = currently playing on ExoPlayer.
@@ -695,6 +701,7 @@ fun PlayerHud(
                     onPreviousChannel = onPreviousChannel,
                     compatMode = compatMode, onToggleCompatMode = toggleCompat,
                     vodOnExo = vodOnExo, onToggleVodEngine = toggleVod,
+                    hasChannelVariants = onPickChannelVariant != null && channelVariants.size > 1,
                     onInfo = { showInfo = !showInfo }, infoOn = showInfo,
                     onReport = {
                         val meta = player.currentMeta.value
@@ -917,7 +924,14 @@ fun PlayerHud(
         }
         HudDialog.SPEED -> SpeedDialog(current = speed, onSelect = { player.setSpeed(it); dialog = HudDialog.NONE }, onDismiss = { dialog = HudDialog.NONE })
         HudDialog.ZOOM -> ZoomDialog(current = zoomMode, onSelect = { player.setZoomModeByUser(it); dialog = HudDialog.NONE }, onDismiss = { dialog = HudDialog.NONE })
-        HudDialog.QUALITY -> {
+        HudDialog.QUALITY -> if (onPickChannelVariant != null && channelVariants.size > 1) {
+            ChannelVariantDialog(
+                labels = channelVariants,
+                current = channelVariantIndex,
+                onSelect = { dialog = HudDialog.NONE; onPickChannelVariant(it) },
+                onDismiss = { dialog = HudDialog.NONE },
+            )
+        } else {
             // Snapshot as it opens, like the track lists above: a live list would rebuild the rows.
             val heights = remember { player.videoQualities.value }
             val pick by player.videoQualityPick.collectAsStateWithLifecycle()

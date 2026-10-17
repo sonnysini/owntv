@@ -108,6 +108,72 @@
 1	technical	app/src/main/java/tv/own/owntv/features/live/CatchupJumpDialog.kt	exact
 1	technical	app/src/main/java/tv/own/owntv/features/live/CatchupManualTimeDialog.kt	:
 1	technical	app/src/main/java/tv/own/owntv/features/live/CatchupManualTimeDialog.kt	EEEMMMd
+6	empty	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	\0
+1	regex	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	$1 $2
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	$upper,$lower,$digits
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	${row.sourceId}:${row.categoryId ?: -1}:${n.groupKey}
+1	regex	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	(?i)\\bfull\\s*hd\\b
+1	regex	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	(?i)\\bultra\\s*hd\\b
+1	regex	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	([a-z])([A-Z])
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	1
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	1080
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	1080P
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	2
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	2160P
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	25FPS
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	3
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	30FPS
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	4
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	480P
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	4K
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	5
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	50FPS
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	576P
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	6
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	60FPS
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	7
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	720
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	720P
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	8
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	8K
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	9
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	AV1
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	DOLBY
+2	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	FHD
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	FPS
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	FUHD
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	FULLHD
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	H.264
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	H.265
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	H264
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	H265
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	HD
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	HDR
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	HEVC
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	LQ
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	PLUS
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	RAW
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	SD
+2	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	UHD
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	VISION
+1	regex	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	[^\\p{L}\\p{Nd} &+.\\-/:|()']+
+1	regex	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	[^a-zA-Z0-9]+
+1	regex	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	^\\s*(?:[\\[(]([A-Z]{2,3})[\\])]\\s*[|:\\-–—]?|([A-Z]{2,3})\\s*[|:\\-–—])\\s*
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	eight
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	five
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	four
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	hd
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	nine
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	one
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	seven
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	six
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	three
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	two
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	ᴬ:A,ᴮ:B,ꟲ:C,ᴰ:D,ᴱ:E,ꟳ:F,ᴳ:G,ᴴ:H,ᴵ:I,ᴶ:J,ᴷ:K,ᴸ:L,ᴹ:M,ᴺ:N,
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	ᴼ:O,ᴾ:P,ꟴ:Q,ᴿ:R,ᵀ:T,ᵁ:U,ⱽ:V,ᵂ:W,ᔆ:S
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	ᵃ:a,ᵇ:b,ᶜ:c,ᵈ:d,ᵉ:e,ᶠ:f,ᵍ:g,ʰ:h,ᶦ:i,ʲ:j,ᵏ:k,ˡ:l,ᵐ:m,ⁿ:n,
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	ᵒ:o,ᵖ:p,ʳ:r,ˢ:s,ᵗ:t,ᵘ:u,ᵛ:v,ʷ:w,ˣ:x,ʸ:y,ᶻ:z
+1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	⁰:0,¹:1,²:2,³:3,⁴:4,⁵:5,⁶:6,⁷:7,⁸:8,⁹:9
 3	technical	app/src/main/java/tv/own/owntv/features/live/LiveScreen.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/features/live/LiveScreen.kt	+
 1	technical	app/src/main/java/tv/own/owntv/features/live/LiveScreen.kt	EEE
@@ -138,14 +204,17 @@
 1	technical	app/src/main/java/tv/own/owntv/features/live/LiveStage.kt	tnum
 2	technical	app/src/main/java/tv/own/owntv/features/live/LiveStage.kt	·
 1	technical	app/src/main/java/tv/own/owntv/features/live/LiveStage.kt	· $left
-6	empty	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	\0
+7	technical	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	#$it
+2	technical	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	,
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	LiveEngine
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	OwnTVHome
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	catch-up '${ch.name}' prog='${programme.title}' -> ${tv.own.owntv.core.network.HttpClient.redactUrl(url)}
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	catch-up external '${ch.name}' prog='${programme.title}'
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	ensurePlaying history profile=$pid channelId=${channel.id}
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	ensurePlaying history record failed channelId=${channel.id} profile=$pid
+1	preference-key	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	fork_channel_variants
+1	file-path	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	fork_variant_index2.txt
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	stalker resolve failed channelId=${channel.id}
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	tuneByNumber($number) failed
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	zap: tune wait ${delayMs}ms — ${zapWaitReason(lastZapPressMs, now, singleConnection)}

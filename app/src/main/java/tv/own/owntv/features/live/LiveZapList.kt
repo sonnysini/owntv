@@ -37,6 +37,8 @@ class LiveZapList(
     /** A bounded provider-order window centred on a channel — the rebuild after a numeric tune. */
     private val loadWindowAround: suspend (ChannelEntity) -> List<ChannelEntity>,
     private val categoryName: suspend (Long) -> String?,
+    /** Fork: the other quality variants of a channel — CH± from a variant steps from its row. */
+    private val aliasesOf: (Long) -> Collection<Long> = { emptyList() },
 ) {
 
     private var list: List<ChannelEntity> = emptyList()
@@ -178,7 +180,11 @@ class LiveZapList(
      */
     fun next(delta: Int): ChannelEntity? {
         val currentId = playingChannelId()
-        val i = if (currentId != null) list.indexOfFirst { it.id == currentId } else -1
+        var i = if (currentId != null) list.indexOfFirst { it.id == currentId } else -1
+        if (i < 0 && currentId != null) {
+            val aliases = aliasesOf(currentId)
+            if (aliases.isNotEmpty()) i = list.indexOfFirst { it.id in aliases }
+        }
         if (i >= 0) {
             val nextIdx = wrappedZapIndex(i, delta, list.size) ?: return null
             return list[nextIdx]
