@@ -85,4 +85,12 @@ class ChannelVariantsTest {
         assertEquals(idx.variantsOf(1), back.variantsOf(1))
         assertEquals(idx.variantsOf(8), back.variantsOf(8))
     }
+
+    @Test
+    fun `the folded row is named without the quality tag`() {
+        val idx = ChannelVariantIndex.build(rai, emptyMap())
+        assertEquals("Rai 1", idx.displayName(3))
+        assertEquals("Rai 1", ChannelVariantIndex.parse(idx.serialize())!!.displayName(3))
+        assertEquals(null, idx.displayName(5))
+    }
 }

@@ -401,7 +401,7 @@ class LiveViewModel(
         }
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
-    private val variantSnapshotFile get() = java.io.File(appContext.filesDir, "fork_variant_index.txt")
+    private val variantSnapshotFile get() = java.io.File(appContext.filesDir, "fork_variant_index2.txt")
 
     private fun saveVariantSnapshot(ids: List<Long>, index: ChannelVariantIndex) {
         runCatching { variantSnapshotFile.writeText(ids.joinToString(",") + "\n" + index.serialize()) }
@@ -434,8 +434,13 @@ class LiveViewModel(
 
     private fun List<ChannelEntity>.withoutFoldedVariants(keep: Long? = null): List<ChannelEntity> {
         val idx = variantIndex.value
-        return filter { it.id == keep || idx.isVisible(it.id) }
+        return filter { it.id == keep || idx.isVisible(it.id) }.map { idx.named(it) }
     }
+
+    /** A folded row reads as the channel (`Rai 1`), not as the variant it plays (`Rai 1 FHD`). Only for
+     *  rows with a provider id: name-keyed rows would lose their customizations under a new name. */
+    private fun ChannelVariantIndex.named(ch: ChannelEntity): ChannelEntity =
+        if (ch.remoteId == null) ch else displayName(ch.id)?.let { ch.copy(name = it) } ?: ch
 
     /** Every guide read this screen makes, and the now/next cache that used to live here — see
      *  [LiveEpgReader]. The shift it applies is passed in at each call, so this view model stays the
@@ -711,7 +716,7 @@ class LiveViewModel(
                 val movedFrom = cust.movedFromOrigin
                 val folded = variants.hidden
                 if (cust.hiddenItems.isEmpty() && cust.itemNames.isEmpty() && hiddenCats.isEmpty() && movedFrom.isEmpty()) {
-                    if (folded.isEmpty()) paging else paging.filter { ch -> ch.id !in folded }
+                    if (folded.isEmpty()) paging else paging.filter { ch -> ch.id !in folded }.map { variants.named(it) }
                 } else paging
                     .filter { ch ->
                         ch.id !in folded &&
@@ -721,7 +726,7 @@ class LiveViewModel(
                                 key !is LiveKey.Folder || origin != folderContextKeys.value[key.id]
                             } ?: true)
                     }
-                    .map { ch -> cust.itemNames[CustomizeKeys.channel(ch)]?.let { ch.copy(name = it) } ?: ch }
+                    .map { ch -> cust.itemNames[CustomizeKeys.channel(ch)]?.let { ch.copy(name = it) } ?: variants.named(ch) }
             }
         }
         .cachedIn(viewModelScope)

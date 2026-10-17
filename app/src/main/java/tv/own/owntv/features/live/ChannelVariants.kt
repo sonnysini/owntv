@@ -17,6 +17,8 @@ data class ChannelVariant(
     val label: String,
     /** Identifies the group across syncs (channel ids are not stable): `source:category:groupKey`. */
     val groupKey: String,
+    /** The channel's name without the quality tag (`Rai 1`), shown on the folded row. */
+    val baseName: String = "",
 )
 
 class ChannelVariantIndex private constructor(
@@ -32,6 +34,9 @@ class ChannelVariantIndex private constructor(
 
     fun isVisible(channelId: Long): Boolean = channelId !in hidden
 
+    /** The folded row's name (`Rai 1` for `Rai 1 FHD`), or null when [channelId] has no variants. */
+    fun displayName(channelId: Long): String? = groups[channelId]?.first()?.baseName?.takeIf { it.isNotBlank() }
+
     /**
      * One line per group — `groupKey`, the shown id, then `id label` pairs — so the next start can fold
      * the list at once instead of waiting seconds for 25k names to be normalized again.
@@ -42,7 +47,7 @@ class ChannelVariantIndex private constructor(
             val key = variants.first().groupKey
             if (!seen.add(key)) continue
             val shown = variants.first { it.id !in hidden }.id
-            append(key).append(SEP).append(shown)
+            append(key).append(SEP).append(shown).append(SEP).append(variants.first().baseName.replace(SEP, ' ').replace('\n', ' '))
             for (v in variants) append(SEP).append(v.id).append(SEP).append(v.label.replace(SEP, ' ').replace('\n', ' '))
             append('\n')
         }
@@ -61,7 +66,8 @@ class ChannelVariantIndex private constructor(
                 val f = line.split(SEP)
                 val key = f[0]
                 val shown = f[1].toLong()
-                val variants = (2 until f.size step 2).map { i -> ChannelVariant(f[i].toLong(), f[i + 1], key) }
+                val base = f[2]
+                val variants = (3 until f.size step 2).map { i -> ChannelVariant(f[i].toLong(), f[i + 1], key, base) }
                 for (v in variants) {
                     groups[v.id] = variants
                     if (v.id != shown) hidden += v.id
@@ -72,14 +78,14 @@ class ChannelVariantIndex private constructor(
 
         /** [picked] maps a group key to the variant id the user chose for it. */
         fun build(rows: List<ChannelVariantRow>, picked: Map<String, Long>): ChannelVariantIndex {
-            data class Entry(val row: ChannelVariantRow, val rank: Int, val label: String)
+            data class Entry(val row: ChannelVariantRow, val rank: Int, val label: String, val base: String)
 
             val byGroup = HashMap<String, MutableList<Entry>>()
             for (row in rows) {
                 val n = ChannelNameNormalizer.normalize(row.name)
                 if (n.groupKey.isEmpty()) continue
                 val key = "${row.sourceId}:${row.categoryId ?: -1}:${n.groupKey}"
-                byGroup.getOrPut(key) { ArrayList(2) } += Entry(row, n.qualityRank, n.qualityLabel)
+                byGroup.getOrPut(key) { ArrayList(2) } += Entry(row, n.qualityRank, n.qualityLabel, n.baseName)
             }
             val hidden = HashSet<Long>()
             val groups = HashMap<Long, List<ChannelVariant>>()
@@ -88,7 +94,8 @@ class ChannelVariantIndex private constructor(
                 val ordered = entries.sortedWith(
                     compareByDescending<Entry> { it.rank }.thenBy { it.row.sortOrder }.thenBy { it.row.id },
                 )
-                val variants = ordered.map { ChannelVariant(it.row.id, it.label.ifBlank { it.row.name }, key) }
+                val base = ordered.first().base
+                val variants = ordered.map { ChannelVariant(it.row.id, it.label.ifBlank { it.row.name }, key, base) }
                 val shown = picked[key]?.takeIf { id -> variants.any { it.id == id } } ?: variants.first().id
                 for (v in variants) {
                     groups[v.id] = variants
@@ -109,6 +116,8 @@ class ChannelVariantIndex private constructor(
 object ChannelNameNormalizer {
 
     data class Normalized(
+        /** The name without quality tags or country prefix, as written: `Rai 1`. */
+        val baseName: String,
         /** Lowercase alphanumerics of the name without quality tags: `rai1`. */
         val groupKey: String,
         /** Higher is better. 0 when the name carries no resolution. */
@@ -187,6 +196,7 @@ object ChannelNameNormalizer {
         }
         val key = groupKeyOf(kept.joinToString(" "))
         return Normalized(
+            baseName = kept.joinToString(" ").ifEmpty { raw.trim() },
             groupKey = key.ifEmpty { groupKeyOf(raw) },
             qualityRank = bestRank,
             qualityLabel = labelParts.joinToString(" "),

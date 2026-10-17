@@ -108,7 +108,7 @@
 1	technical	app/src/main/java/tv/own/owntv/features/live/CatchupJumpDialog.kt	exact
 1	technical	app/src/main/java/tv/own/owntv/features/live/CatchupManualTimeDialog.kt	:
 1	technical	app/src/main/java/tv/own/owntv/features/live/CatchupManualTimeDialog.kt	EEEMMMd
-4	empty	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	\0
+6	empty	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	\0
 1	regex	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	$1 $2
 1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	$upper,$lower,$digits
 1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	${row.sourceId}:${row.categoryId ?: -1}:${n.groupKey}
@@ -214,7 +214,7 @@
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	ensurePlaying history profile=$pid channelId=${channel.id}
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	ensurePlaying history record failed channelId=${channel.id} profile=$pid
 1	preference-key	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	fork_channel_variants
-1	file-path	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	fork_variant_index.txt
+1	file-path	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	fork_variant_index2.txt
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	stalker resolve failed channelId=${channel.id}
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	tuneByNumber($number) failed
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	zap: tune wait ${delayMs}ms — ${zapWaitReason(lastZapPressMs, now, singleConnection)}
