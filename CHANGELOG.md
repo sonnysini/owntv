@@ -10,7 +10,7 @@
 ## Unreleased
 
 ### ✨ New features
-- **📺 FHD/HD/SD variants of a channel in one Live row, picked from Quality**
+- **📺 FHD/HD/SD variants of a channel in one Live and Guide row, picked from Quality**
 - **↩️ Restore a category, or the playlists shown, to the playlist default** (community PR #235 by @tvdev-android)
 - **🔄 "Stream interrupted. Reconnecting…" while a live channel recovers** (community PR #237 by @tvdev-android)
 - **🖼️ Title art in Home's trending banner**
