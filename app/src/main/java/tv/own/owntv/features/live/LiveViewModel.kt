@@ -138,6 +138,8 @@ class LiveViewModel(
     private val recordings: tv.own.owntv.core.recording.RecordingManager,
     /** Keeps the preview pane off a one-stream playlist while a download is using it. */
     private val downloadWatchGuard: tv.own.owntv.core.download.DownloadWatchGuard,
+    /** Fork: the FHD/HD/SD folding index, shared with the Guide. */
+    private val variantStore: ChannelVariantStore,
 ) : ViewModel() {
 
     // --- "Record what I'm watching" (Plan D, D3 mode b) -----------------------------------------
@@ -373,46 +375,17 @@ class LiveViewModel(
 
     // --- Fork: quality variants (FHD/HD/SD…) folded into one row ------------------------------------
 
-    /** Which variant the user picked per channel, keyed by [ChannelVariant.groupKey]. */
-    private val variantPicks = appContext.getSharedPreferences("fork_channel_variants", Context.MODE_PRIVATE)
-    private val variantPicksVersion = MutableStateFlow(0)
-
-    /** Rebuilt after every sync (the channels table re-emits) and after every pick. Null until the
-     *  first build, so the Live list waits for it instead of showing every variant and then folding. */
+    /** Null until the first index, so the Live list waits for it instead of showing every variant and
+     *  then folding. Rebuilt after every sync and every pick — see [ChannelVariantStore]. */
     private val variantIndexFor: StateFlow<Pair<List<Long>, ChannelVariantIndex>?> = ctx
         .map { it.sourceIds }
         .distinctUntilChanged()
         .flatMapLatest { ids ->
-            if (ids.isEmpty()) return@flatMapLatest flowOf(ids to ChannelVariantIndex.EMPTY)
-            // A sync rewrites the table in many batches: settle before rebuilding — except the first time.
-            var first = true
-            val built = channelDao.observeVariantRows(ids)
-                .debounce { if (first) { first = false; 0L } else 500L }
-                .combine(variantPicksVersion) { rows, _ ->
-                    withContext(Dispatchers.Default) {
-                        val picks = variantPicks.all.mapNotNull { (k, v) -> (v as? Long)?.let { k to it } }.toMap()
-                        ChannelVariantIndex.build(rows, picks).also { saveVariantSnapshot(ids, it) }
-                    }
-                }
-                .map { ids to it }
-            // Last run's index first, so the list folds at once; the rebuild replaces it seconds later.
-            val cached = withContext(Dispatchers.IO) { loadVariantSnapshot(ids) }
-            if (cached == null) built else built.onStart { emit(ids to cached) }
+            if (ids.isEmpty()) flowOf(ids to ChannelVariantIndex.EMPTY)
+            else variantStore.observe(ids).map { ids to it }
         }
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
-    private val variantSnapshotFile get() = java.io.File(appContext.filesDir, "fork_variant_index2.txt")
-
-    private fun saveVariantSnapshot(ids: List<Long>, index: ChannelVariantIndex) {
-        runCatching { variantSnapshotFile.writeText(ids.joinToString(",") + "\n" + index.serialize()) }
-    }
-
-    private fun loadVariantSnapshot(ids: List<Long>): ChannelVariantIndex? = runCatching {
-        val text = variantSnapshotFile.takeIf { it.isFile }?.readText() ?: return null
-        val header = text.substringBefore('\n')
-        if (header != ids.joinToString(",")) return null
-        ChannelVariantIndex.parse(text.substringAfter('\n'))
-    }.getOrNull()
     private val variantIndex: StateFlow<ChannelVariantIndex> = variantIndexFor
         .map { it?.second ?: ChannelVariantIndex.EMPTY }
         .stateIn(viewModelScope, SharingStarted.Eagerly, ChannelVariantIndex.EMPTY)
@@ -424,8 +397,7 @@ class LiveViewModel(
 
     /** Play [variant] and make it the row this channel shows from now on. */
     fun pickVariant(variant: ChannelVariant) {
-        variantPicks.edit().putLong(variant.groupKey, variant.id).apply()
-        variantPicksVersion.value++
+        variantStore.pick(variant)
         viewModelScope.launch {
             val channel = withContext(Dispatchers.IO) { channelDao.getById(variant.id) } ?: return@launch
             ensurePlaying(custom.value.itemNames[CustomizeKeys.channel(channel)]?.let { channel.copy(name = it) } ?: channel)

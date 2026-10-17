@@ -34,6 +34,23 @@ class ChannelVariantIndex private constructor(
 
     fun isVisible(channelId: Long): Boolean = channelId !in hidden
 
+    /**
+     * One row per channel out of a list that is not every channel (the Guide's: only those with a
+     * guide). The shown variant when it is in [items], else the best one that is — so a channel
+     * whose shown variant has no guide still gets its row from a sibling that has one.
+     */
+    fun <T> fold(items: List<T>, idOf: (T) -> Long): List<T> {
+        if (groups.isEmpty()) return items
+        val present = items.mapTo(HashSet(), idOf)
+        return items.filter { item ->
+            val id = idOf(item)
+            val variants = groups[id] ?: return@filter true
+            val stand = variants.firstOrNull { it.id !in hidden && it.id in present }
+                ?: variants.firstOrNull { it.id in present }
+            stand?.id == id
+        }
+    }
+
     /** The folded row's name (`Rai 1` for `Rai 1 FHD`), or null when [channelId] has no variants. */
     fun displayName(channelId: Long): String? = groups[channelId]?.first()?.baseName?.takeIf { it.isNotBlank() }
 
