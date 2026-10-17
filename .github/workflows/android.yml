@@ -109,6 +109,19 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
 
+      # Fork: build against sonnysini/owntv-core (API 25 support) instead of the published core.
+      - name: Checkout core (fork)
+        uses: actions/checkout@v7
+        with:
+          repository: sonnysini/owntv-core
+          ref: api25
+          path: owntv-core
+
+      - name: Use core from source
+        run: |
+          mkdir -p ~/.gradle
+          echo "owntv.corePath=$GITHUB_WORKSPACE/owntv-core" >> ~/.gradle/gradle.properties
+
       # One variant, not `test`/`lint` across every flavor: standard+debug is the variant the JVM
       # tests are written against, and the ABI flavors differ only in the packaged native libs.
       - name: Unit tests
@@ -161,6 +174,19 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
+
+      # Fork: build against sonnysini/owntv-core (API 25 support) instead of the published core.
+      - name: Checkout core (fork)
+        uses: actions/checkout@v7
+        with:
+          repository: sonnysini/owntv-core
+          ref: api25
+          path: owntv-core
+
+      - name: Use core from source
+        run: |
+          mkdir -p ~/.gradle
+          echo "owntv.corePath=$GITHUB_WORKSPACE/owntv-core" >> ~/.gradle/gradle.properties
 
       - name: Compute version (from the git tag on releases)
         id: ver

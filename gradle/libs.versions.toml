@@ -1,4 +1,5 @@
 [versions]
+desugarJdkLibs = "2.1.5"
 # --- Build toolchain ---
 # AGP brings its own Kotlin, but the Compose compiler plugin below pulls the Kotlin Gradle plugin up
 # to the version pinned here — so `kotlin` is what actually compiles the app. Keep the Compose
@@ -82,6 +83,7 @@ espressoCore = "3.7.0"
 owntvCore = "1.0.67"
 
 [libraries]
+desugar-jdk-libs = { group = "com.android.tools", name = "desugar_jdk_libs", version.ref = "desugarJdkLibs" }
 # The shared engine, from its own repository
 owntv-core = { group = "tv.own.owntv", name = "core", version.ref = "owntvCore" }
 owntv-player-core = { group = "tv.own.owntv", name = "player-core", version.ref = "owntvCore" }
