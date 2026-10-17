@@ -70,4 +70,10 @@ class ChannelVariantsTest {
         val idx = ChannelVariantIndex.build(listOf(row(1, "IT| Canale 5 ᴴᴰ"), row(2, "IT: CANALE 5 FHD")), emptyMap())
         assertEquals(listOf(2L, 1L), idx.variantsOf(1).map { it.id })
     }
+
+    @Test
+    fun `two-word quality tags fold too`() {
+        val idx = ChannelVariantIndex.build(listOf(row(1, "Rai 2 4K"), row(2, "Rai 2 Full HD"), row(3, "Rai 2 Ultra HD")), emptyMap())
+        assertEquals(listOf("4K", "UHD", "FHD"), idx.variantsOf(2).map { it.label })
+    }
 }

@@ -112,6 +112,8 @@
 1	regex	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	$1 $2
 1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	$upper,$lower,$digits
 1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	${row.sourceId}:${row.categoryId ?: -1}:${n.groupKey}
+1	regex	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	(?i)\\bfull\\s*hd\\b
+1	regex	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	(?i)\\bultra\\s*hd\\b
 1	regex	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	([a-z])([A-Z])
 1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	1
 1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	1080
@@ -137,7 +139,7 @@
 1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	9
 1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	AV1
 1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	DOLBY
-1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	FHD
+2	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	FHD
 1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	FPS
 1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	FUHD
 1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	FULLHD
@@ -152,7 +154,7 @@
 1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	PLUS
 1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	RAW
 1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	SD
-1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	UHD
+2	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	UHD
 1	technical	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	VISION
 1	regex	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	[^\\p{L}\\p{Nd} &+.\\-/:|()']+
 1	regex	app/src/main/java/tv/own/owntv/features/live/ChannelVariants.kt	[^a-zA-Z0-9]+

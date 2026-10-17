@@ -111,6 +111,9 @@ object ChannelNameNormalizer {
 
     /** Leading country tag: `UK|`, `IT:`, `[UK]`, `(US)`. Kept out of the key so it cannot split a group. */
     private val COUNTRY_PREFIX = Regex("""^\s*(?:[\[(]([A-Z]{2,3})[\])]\s*[|:\-–—]?|([A-Z]{2,3})\s*[|:\-–—])\s*""")
+    /** Two-word tags folded to their one-word form first: `Full HD` → `FHD`, `Ultra HD` → `UHD`. */
+    private val FULL_HD = Regex("""(?i)\bfull\s*hd\b""")
+    private val ULTRA_HD = Regex("""(?i)\bultra\s*hd\b""")
     private val DECORATION = Regex("""[^\p{L}\p{Nd} &+.\-/:|()']+""")
     private val CAMEL_BOUNDARY = Regex("""([a-z])([A-Z])""")
     private val NON_ALNUM = Regex("""[^a-zA-Z0-9]+""")
@@ -127,6 +130,7 @@ object ChannelNameNormalizer {
     fun normalize(raw: String): Normalized {
         var working = foldSuperscripts(raw.trim())
         COUNTRY_PREFIX.find(working)?.let { working = working.removeRange(it.range) }
+        working = ULTRA_HD.replace(FULL_HD.replace(working, "FHD"), "UHD")
         working = DECORATION.replace(working, " ")
 
         var bestRank = 0
