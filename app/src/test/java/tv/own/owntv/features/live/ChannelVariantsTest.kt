@@ -76,4 +76,13 @@ class ChannelVariantsTest {
         val idx = ChannelVariantIndex.build(listOf(row(1, "Rai 2 4K"), row(2, "Rai 2 Full HD"), row(3, "Rai 2 Ultra HD")), emptyMap())
         assertEquals(listOf("4K", "UHD", "FHD"), idx.variantsOf(2).map { it.label })
     }
+
+    @Test
+    fun `a saved index reads back the same`() {
+        val idx = ChannelVariantIndex.build(rai, emptyMap())
+        val back = ChannelVariantIndex.parse(idx.serialize())!!
+        assertEquals(idx.hidden, back.hidden)
+        assertEquals(idx.variantsOf(1), back.variantsOf(1))
+        assertEquals(idx.variantsOf(8), back.variantsOf(8))
+    }
 }

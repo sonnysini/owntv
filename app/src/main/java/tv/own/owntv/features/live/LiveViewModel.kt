@@ -39,6 +39,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.withIndex
 import kotlinx.coroutines.launch
@@ -382,20 +383,36 @@ class LiveViewModel(
         .map { it.sourceIds }
         .distinctUntilChanged()
         .flatMapLatest { ids ->
-            if (ids.isEmpty()) return@flatMapLatest flowOf(ids to emptyList<tv.own.owntv.core.database.dao.ChannelVariantRow>())
+            if (ids.isEmpty()) return@flatMapLatest flowOf(ids to ChannelVariantIndex.EMPTY)
             // A sync rewrites the table in many batches: settle before rebuilding — except the first time.
             var first = true
-            channelDao.observeVariantRows(ids)
+            val built = channelDao.observeVariantRows(ids)
                 .debounce { if (first) { first = false; 0L } else 500L }
+                .combine(variantPicksVersion) { rows, _ ->
+                    withContext(Dispatchers.Default) {
+                        val picks = variantPicks.all.mapNotNull { (k, v) -> (v as? Long)?.let { k to it } }.toMap()
+                        ChannelVariantIndex.build(rows, picks).also { saveVariantSnapshot(ids, it) }
+                    }
+                }
                 .map { ids to it }
-        }
-        .combine(variantPicksVersion) { (ids, rows), _ ->
-            withContext(Dispatchers.Default) {
-                val picks = variantPicks.all.mapNotNull { (k, v) -> (v as? Long)?.let { k to it } }.toMap()
-                ids to ChannelVariantIndex.build(rows, picks)
-            }
+            // Last run's index first, so the list folds at once; the rebuild replaces it seconds later.
+            val cached = withContext(Dispatchers.IO) { loadVariantSnapshot(ids) }
+            if (cached == null) built else built.onStart { emit(ids to cached) }
         }
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    private val variantSnapshotFile get() = java.io.File(appContext.filesDir, "fork_variant_index.txt")
+
+    private fun saveVariantSnapshot(ids: List<Long>, index: ChannelVariantIndex) {
+        runCatching { variantSnapshotFile.writeText(ids.joinToString(",") + "\n" + index.serialize()) }
+    }
+
+    private fun loadVariantSnapshot(ids: List<Long>): ChannelVariantIndex? = runCatching {
+        val text = variantSnapshotFile.takeIf { it.isFile }?.readText() ?: return null
+        val header = text.substringBefore('\n')
+        if (header != ids.joinToString(",")) return null
+        ChannelVariantIndex.parse(text.substringAfter('\n'))
+    }.getOrNull()
     private val variantIndex: StateFlow<ChannelVariantIndex> = variantIndexFor
         .map { it?.second ?: ChannelVariantIndex.EMPTY }
         .stateIn(viewModelScope, SharingStarted.Eagerly, ChannelVariantIndex.EMPTY)

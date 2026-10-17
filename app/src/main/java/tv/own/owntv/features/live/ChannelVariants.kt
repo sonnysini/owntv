@@ -32,8 +32,43 @@ class ChannelVariantIndex private constructor(
 
     fun isVisible(channelId: Long): Boolean = channelId !in hidden
 
+    /**
+     * One line per group — `groupKey`, the shown id, then `id label` pairs — so the next start can fold
+     * the list at once instead of waiting seconds for 25k names to be normalized again.
+     */
+    fun serialize(): String = buildString {
+        val seen = HashSet<String>()
+        for (variants in groups.values) {
+            val key = variants.first().groupKey
+            if (!seen.add(key)) continue
+            val shown = variants.first { it.id !in hidden }.id
+            append(key).append(SEP).append(shown)
+            for (v in variants) append(SEP).append(v.id).append(SEP).append(v.label.replace(SEP, ' ').replace('\n', ' '))
+            append('\n')
+        }
+    }
+
     companion object {
         val EMPTY = ChannelVariantIndex(emptySet(), emptyMap())
+        private const val SEP = '\t'
+
+        /** The index [serialize] wrote, or null when the text is not one. */
+        fun parse(text: String): ChannelVariantIndex? = runCatching {
+            val hidden = HashSet<Long>()
+            val groups = HashMap<Long, List<ChannelVariant>>()
+            for (line in text.lineSequence()) {
+                if (line.isEmpty()) continue
+                val f = line.split(SEP)
+                val key = f[0]
+                val shown = f[1].toLong()
+                val variants = (2 until f.size step 2).map { i -> ChannelVariant(f[i].toLong(), f[i + 1], key) }
+                for (v in variants) {
+                    groups[v.id] = variants
+                    if (v.id != shown) hidden += v.id
+                }
+            }
+            ChannelVariantIndex(hidden, groups)
+        }.getOrNull()
 
         /** [picked] maps a group key to the variant id the user chose for it. */
         fun build(rows: List<ChannelVariantRow>, picked: Map<String, Long>): ChannelVariantIndex {
@@ -130,7 +165,7 @@ object ChannelNameNormalizer {
     fun normalize(raw: String): Normalized {
         var working = foldSuperscripts(raw.trim())
         COUNTRY_PREFIX.find(working)?.let { working = working.removeRange(it.range) }
-        working = ULTRA_HD.replace(FULL_HD.replace(working, "FHD"), "UHD")
+        if (working.contains("hd", ignoreCase = true)) working = ULTRA_HD.replace(FULL_HD.replace(working, "FHD"), "UHD")
         working = DECORATION.replace(working, " ")
 
         var bestRank = 0
