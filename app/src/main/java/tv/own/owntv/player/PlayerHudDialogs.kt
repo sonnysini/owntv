@@ -348,6 +348,25 @@ internal fun QualityDialog(heights: List<Int>, current: Int?, onSelect: (Int?) -
     }
 }
 
+/** Fork: the provider's variants of the playing channel (FHD, HD, SD, HEVC…), best first. */
+@Composable
+internal fun ChannelVariantDialog(labels: List<String>, current: Int, onSelect: (Int) -> Unit, onDismiss: () -> Unit) {
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { requestFocusRetrying(focus) }
+    BackHandler { onDismiss() }
+    val selectedIndex = current.coerceIn(0, labels.lastIndex)
+    DialogScaffold(title = stringResource(R.string.player_tool_quality), onDismiss = onDismiss) {
+        items(labels.size) { index ->
+            OptionRow(
+                label = labels[index],
+                selected = index == current,
+                modifier = if (index == selectedIndex) Modifier.focusRequester(focus) else Modifier,
+                onClick = { onSelect(index) },
+            )
+        }
+    }
+}
+
 @Composable
 internal fun VolumeDialog(player: PlaybackEngine, onDismiss: () -> Unit) {
     val volume by player.volume.collectAsStateWithLifecycle()

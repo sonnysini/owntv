@@ -383,6 +383,7 @@ fun OwnTVShell(
     val browserRailItems by liveVm.railItems.collectAsStateWithLifecycle()
     val browserRailCounts by liveVm.railCounts.collectAsStateWithLifecycle()
     val previewChannel by liveVm.previewChannel.collectAsStateWithLifecycle()
+    val previewVariants by liveVm.previewVariants.collectAsStateWithLifecycle()
     val playerRecording by liveVm.playerRecording.collectAsStateWithLifecycle()
     val overlayProgrammes by liveVm.nowProgrammes.collectAsStateWithLifecycle()
     val overlayFavoriteIds by liveVm.favoriteIds.collectAsStateWithLifecycle()
@@ -1703,6 +1704,12 @@ fun OwnTVShell(
                     // A copy saved on this device (N4) is the exception: the other engine re-opens the same copy
                     // at the same moment, so the rewind survives the switch.
                     onToggleCompatMode = if (isTunedLive && (!timeshifted || onLocalCopy) && previewChannel?.drmConfig == null) liveVm::toggleForceMpv else null,
+                    // Fork: FHD/HD/SD… of the same channel, folded into one row — chosen from Quality.
+                    channelVariants = if (isTunedLive) previewVariants.map { it.label } else emptyList(),
+                    channelVariantIndex = previewVariants.indexOfFirst { it.id == previewChannel?.id },
+                    onPickChannelVariant = if (isTunedLive && !timeshifted && previewVariants.size > 1) {
+                        { i -> previewVariants.getOrNull(i)?.let(liveVm::pickVariant) }
+                    } else null,
                     // VOD engine toggle (movies/series only — live and catch-up channels keep their own
                     // engine handling above): flip the current item between mpv and ExoPlayer.
                     vodOnExo = if (!isLiveStream && !isTunedLive) vodExoActive else null,

@@ -325,6 +325,8 @@ internal fun BottomBar(
     liveGaps: () -> List<LongRange> = { emptyList() },
     compatMode: Boolean?, onToggleCompatMode: (() -> Unit)?,
     vodOnExo: Boolean?, onToggleVodEngine: (() -> Unit)?,
+    /** Fork: the live channel comes in several provider variants (FHD/HD/SD…) to choose from. */
+    hasChannelVariants: Boolean = false,
     onInfo: (() -> Unit)? = null, infoOn: Boolean = false, onReport: (() -> Unit)? = null,
     favorite: Boolean = false, onToggleFavorite: (() -> Unit)? = null,
     onPreviousChannel: (() -> Unit)? = null,
@@ -456,7 +458,7 @@ internal fun BottomBar(
                         PlayerControl.QUALITY -> {
                             val qualities by player.videoQualities.collectAsStateWithLifecycle()
                             val pick by player.videoQualityPick.collectAsStateWithLifecycle()
-                            if (qualities.isNotEmpty()) {
+                            if (qualities.isNotEmpty() || hasChannelVariants) {
                                 CtrlButton(OwnTVIcon.VIDEO, active = pick != null, label = stringResource(R.string.player_tool_quality)) { onOpenDialog(HudDialog.QUALITY) }
                             }
                         }
